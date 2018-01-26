@@ -396,10 +396,10 @@ for e in range(epoch):
         K1 = K1 - l * Delta_K1
         K2 = K2 - l * Delta_K2
 
-        Delta_B_W1 += B_W1 * 2 * lambda_regu
-        Delta_B_W2 += B_W2 * 2 * lambda_regu
-        Delta_B_K1 += B_K1 * 2 * lambda_regu
-        Delta_B_K2 += B_K2 * 2 * lambda_regu
+        # Delta_B_W1 += B_W1 * 2 * lambda_regu
+        # Delta_B_W2 += B_W2 * 2 * lambda_regu
+        # Delta_B_K1 += B_K1 * 2 * lambda_regu
+        # Delta_B_K2 += B_K2 * 2 * lambda_regu
 
         B_W1 = B_W1 - l * Delta_B_W1
         B_W2 = B_W2 - l * Delta_B_W2
@@ -409,5 +409,5 @@ for e in range(epoch):
         # print('OUTPUT shape:', O.shape)
         # print(O)
 
-    #     break
+        # break
     # break
