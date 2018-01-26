@@ -259,50 +259,6 @@ def conv_back(DELTA, V, K, relu_matrix):
     return DELTA_V, DELTA_K
 
 
-def MLP_bias(x, b):
-    batch_size = x.shape[0]
-    # node_size = b.shape[0]
-    m = np.zeros(shape=(batch_size, 1))
-    m = m + 1
-    mb = np.matmul(m, b)
-    y = x + mb
-    return y
-
-
-def MLP_bias_back(gradient):
-    batch_size = gradient.shape[0]
-    m = np.zeros(shape=(1, batch_size))
-    m = m + 1
-    y = np.matmul(m, gradient)
-    return y
-
-
-def conv_bias(x, b):
-    # z_dimension = x.shape[0]
-    y_dimension = x.shape[1]
-    x_dimension = x.shape[2]
-    m = np.zeros(shape=(1, y_dimension * x_dimension))
-    m = m + 1
-    mb = np.matmul(b, m)
-    mb = mb.reshape(x.shape)
-    output = x + mb
-    # print(output.shape)
-    return output
-
-
-def conv_bias_back(gradient):
-    z_dimension = gradient.shape[0]
-    y_dimension = gradient.shape[1]
-    x_dimension = gradient.shape[2]
-    g = gradient.reshape((z_dimension, y_dimension * x_dimension))
-    m = np.zeros(shape=(y_dimension * x_dimension, 1))
-    m = m + 1
-    output = np.matmul(g, m)
-    # print(output.shape)
-    return output
-
-
-
 adjust = 0.01
 
 K1 = np.random.random(size=(5, 1, 5, 5)) * adjust
@@ -310,26 +266,16 @@ K2 = np.random.random(size=(10, 5, 5, 5)) * adjust
 W1 = np.random.random(size=(1000, 100)) * adjust
 W2 = np.random.random(size=(100, 10)) * adjust
 
-B_K1 = np.zeros(shape=(K1.shape[0], 1))
-B_K2 = np.zeros(shape=(K2.shape[0], 1))
-B_W1 = np.zeros(shape=(1, W1.shape[1]))
-B_W2 = np.zeros(shape=(1, W2.shape[1]))
-
-
 epoch = 100
 l = 0.01
 min_error = 999
-lambda_regu = 0.02
-
 for e in range(epoch):
     for case, (image, label) in enumerate(train_set):
         Image = normalize_image(image)
         O = conv(Image, K1)  # U1
-        O = conv_bias(O, B_K1)
         O, mf1 = relu(O)  # C1
         C1 = O
         O = conv(O, K2)  # U2
-        O = conv_bias(O, B_K2)
         O, mf2 = relu(O)  # C2
 
         O, mp1 = max_pooling(O)  # P1
@@ -337,13 +283,11 @@ for e in range(epoch):
         O = tensor_to_1d_vector_transpose(O)  # P2
         P2 = O
         O = MLP(O, W1)  # U3
-        O = MLP_bias(O, B_W1)
         O, mf3 = relu(O)  # F1
         F1 = O
 
         O = MLP(O, W2)  # U4
-        O = MLP_bias(O, B_W2)
-        # O, mf4 = relu(O)  # F2
+        O, mf4 = relu(O)  # F2
 
         O = softmax(O)  # Y_hat
         prediction = predict(O)  # prediction
@@ -358,13 +302,9 @@ for e in range(epoch):
         # print(Temp.shape)
         D = np.matmul(D, Temp)
         del Temp
-        Delta_B_W2 = MLP_bias_back(D)
-        Delta_W2 = np.matmul(F1.T, D)
-        D = np.matmul(D, W2.T)
-        # D, Delta_W2 = MLP_back(D, F1, W2, mf4)
+        D, Delta_W2 = MLP_back(D, F1, W2, mf4)
         # print('DELTA_W2:', Delta_W2.shape)
-        del F1  # , mf4
-        Delta_B_W1 = MLP_bias_back(np.multiply(D, mf3))
+        del F1, mf4
         D, Delta_W1 = MLP_back(D, P2, W1, mf3)
         # print('DELTA_W1:', Delta_W1.shape)
         del P2, mf3
@@ -375,39 +315,23 @@ for e in range(epoch):
         # for i in range(10):
         #     print(mp1[i][6:9, 6:9])
         del mp1
-        Delta_B_K2 = conv_bias_back(np.multiply(mf2, D))
+
         D, Delta_K2 = conv_back(D, C1, K2, mf2)
         del C1, mf2
         # print('DELTA_K2:', Delta_K2.shape)
 
-        Delta_B_K1 = conv_bias_back(np.multiply(mf1, D))
         D, Delta_K1 = conv_back(D, Image, K1, mf1)
         # print('DELTA_K1:', Delta_K1.shape)
         # print('Delta shape:', D.shape)
 
-        Delta_W1 += W1 * 2 * lambda_regu
-        Delta_W2 += W2 * 2 * lambda_regu
-        Delta_K1 += K1 * 2 * lambda_regu
-        Delta_K2 += K2 * 2 * lambda_regu
 
 
         W1 = W1 - l * Delta_W1
         W2 = W2 - l * Delta_W2
         K1 = K1 - l * Delta_K1
         K2 = K2 - l * Delta_K2
-
-        Delta_B_W1 += B_W1 * 2 * lambda_regu
-        Delta_B_W2 += B_W2 * 2 * lambda_regu
-        Delta_B_K1 += B_K1 * 2 * lambda_regu
-        Delta_B_K2 += B_K2 * 2 * lambda_regu
-
-        B_W1 = B_W1 - l * Delta_B_W1
-        B_W2 = B_W2 - l * Delta_B_W2
-        B_K1 = B_K1 - l * Delta_B_K1
-        B_K2 = B_K2 - l * Delta_B_K2
         # print(D[1][6:10, 6:10])
         # print('OUTPUT shape:', O.shape)
         # print(O)
 
-    #     break
-    # break
+        # break
